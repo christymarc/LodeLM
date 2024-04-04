@@ -9,6 +9,10 @@ import java.security.*;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.BadPaddingException;
+import java.security.spec.InvalidKeySpecException;
+
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
 
 import utils.*;
 import javax.crypto.SecretKey;
@@ -18,8 +22,11 @@ public class Client {
     private static final int SERVER_PORT = 12345;
     private int BUFFER_SIZE = 4096;
 
-    public static void main(String[] args) throws NoSuchProviderException, NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException {
+    public static void main(String[] args) throws NoSuchProviderException, NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException, Exception, InvalidAlgorithmParameterException {
         try {
+            String clientName = "Client";
+            String serverName = "Server";
+
             Socket socket = new Socket(SERVER_IP, SERVER_PORT);
             System.out.println("Connected to Server");
 
@@ -34,11 +41,31 @@ public class Client {
             SecretKey aesKey;
             SecretKey macKey;
 
+            // ISO/IEC 11770-3 Key Transport Mechanism 2
+
+            // Send name
+            byte[] clientNameByte = clientName.getBytes();
+            dataOutputStream.writeLong(clientNameByte.length);
+            dataOutputStream.write(clientNameByte);
+
+            // Send time
+            String time = TimeUtil.getTime();
+            byte[] timeByte = time.getBytes();
+            dataOutputStream.writeLong(timeByte.length);
+            dataOutputStream.write(timeByte);
+
+            // Server public RSA key
+            String serverPublicKeyFile = "rsa_keys/server_public.pem";
+            RSAPublicKey serverPublicKey= RSAEncryption.readRSAPublicKey(serverPublicKeyFile);
+
             // AES KEY Communication
             aesKey = fe.getAESKey();
             byte[] keyData =  aesKey.getEncoded();
-            //TODO: Encrypt keydata
-            dataOutputStream.write(keyData);
+
+            // Encrypt clientName and AES Key
+            byte[] clientShareKey = OtherUtils.concatenateByteArrays(clientName.getBytes(), keyData);
+            byte[] cipherText = RSAEncryption.RSAEncrypt(clientShareKey, serverPublicKey);
+            dataOutputStream.write(cipherText);
             dataOutputStream.flush();
             System.out.println("Secret Key Shared");
 

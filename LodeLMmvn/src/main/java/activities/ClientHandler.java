@@ -8,6 +8,9 @@ import javax.crypto.spec.SecretKeySpec;
 import java.security.*;
 import java.nio.charset.StandardCharsets;
 
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
+
 import java.util.Arrays;
 import utils.*;
 import javax.crypto.SecretKey;
@@ -15,7 +18,9 @@ import javax.crypto.SecretKey;
 public class ClientHandler implements Runnable {
     private int AES_KEY_LENGTH = 32;
     private int MAC_KEY_LENGTH = 32; // 256 bits to 32 bytes
-    private int BUFFER_SIZE = 4096;
+    private int MAX_BUFFER_SIZE = 4096;
+
+    private String serverName = "Server";
 
     private Socket clientSocket;
     private PrintWriter out;
@@ -40,10 +45,43 @@ public class ClientHandler implements Runnable {
 
             FileEncryption fe = new FileEncryption();
 
-            // Receive AES Key
-            byte[] aesKey = new byte[AES_KEY_LENGTH];
-            dataInputStream.read(aesKey, 0, AES_KEY_LENGTH);
-            // aesKey = decryptRSA(aesKey, rsaKey);
+            // Receive Name
+            long size = dataInputStream.readLong();
+            int maxBytesName = (int) Math.min(MAX_BUFFER_SIZE, size);
+            byte[] clientNameByte = new byte[maxBytesName];
+            dataInputStream.read(clientNameByte, 0, maxBytesName);
+            String clientName = new String(clientNameByte, StandardCharsets.UTF_8);
+            System.out.println(clientName);
+
+            // Receive Time
+            size = dataInputStream.readLong();
+            int maxBytesTime = (int) Math.min(MAX_BUFFER_SIZE, size);
+            byte[] timeByte = new byte[maxBytesTime];
+            dataInputStream.read(timeByte, 0, maxBytesTime);
+            String time = new String(timeByte, StandardCharsets.UTF_8);
+            System.out.println(time);
+
+            // Receive Name and AES Key
+            byte[] cipherText = new byte[maxBytesName + AES_KEY_LENGTH];
+            dataInputStream.read(cipherText, 0, maxBytesName + AES_KEY_LENGTH);
+            // Decrypt
+            String serverPrivateKeyFile = "rsa_keys/server_private.pem";
+            byte[] nameKeyShare = cipherText;
+            try {
+                RSAPrivateKey serverPrivateKey = RSAEncryption.readRSAPrivateKey(serverPrivateKeyFile);
+                nameKeyShare = RSAEncryption.decryptRSA(cipherText, serverPrivateKey);
+            } catch (Exception e) {
+                System.out.println(e);
+            }
+            byte[] clientNameByte2 = Arrays.copyOfRange(nameKeyShare, 0, maxBytesName);
+            String clientName2 = new String(clientNameByte2, StandardCharsets.UTF_8);
+
+            if (!clientName.equals(clientName2)) {
+                System.out.println("Untrustworthy Client");
+                clientSocket.close();
+            }
+
+            byte[] aesKey = Arrays.copyOfRange(nameKeyShare, maxBytesName, maxBytesName + AES_KEY_LENGTH);
             SecretKey aesSecretKey = new SecretKeySpec(aesKey, 0, AES_KEY_LENGTH, "AES");
             System.out.println("AES Key Received");
 

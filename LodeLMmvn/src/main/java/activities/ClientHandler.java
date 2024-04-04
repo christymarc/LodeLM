@@ -62,8 +62,8 @@ public class ClientHandler implements Runnable {
             System.out.println(time);
 
             // Receive Name and AES Key
-            byte[] cipherText = new byte[maxBytesName + AES_KEY_LENGTH];
-            dataInputStream.read(cipherText, 0, maxBytesName + AES_KEY_LENGTH);
+            byte[] cipherText = new byte[AES_KEY_LENGTH];
+            dataInputStream.read(cipherText, 0, AES_KEY_LENGTH);
             // Decrypt
             String serverPrivateKeyFile = "rsa_keys/server_private.pem";
             byte[] nameKeyShare = cipherText;
@@ -73,15 +73,16 @@ public class ClientHandler implements Runnable {
             } catch (Exception e) {
                 System.out.println(e);
             }
-            byte[] clientNameByte2 = Arrays.copyOfRange(nameKeyShare, 0, maxBytesName);
-            String clientName2 = new String(clientNameByte2, StandardCharsets.UTF_8);
+            // byte[] clientNameByte2 = Arrays.copyOfRange(nameKeyShare, 0, maxBytesName);
+            // String clientName2 = new String(clientNameByte2, StandardCharsets.UTF_8);
 
-            if (!clientName.equals(clientName2)) {
-                System.out.println("Untrustworthy Client");
-                clientSocket.close();
-            }
+            // if (!clientName.equals(clientName2)) {
+            //     System.out.println("Untrustworthy Client");
+            //     clientSocket.close();
+            // }
 
-            byte[] aesKey = Arrays.copyOfRange(nameKeyShare, maxBytesName, maxBytesName + AES_KEY_LENGTH);
+            // byte[] aesKey = Arrays.copyOfRange(nameKeyShare, maxBytesName, maxBytesName + AES_KEY_LENGTH);
+            byte[] aesKey = nameKeyShare;
             SecretKey aesSecretKey = new SecretKeySpec(aesKey, 0, AES_KEY_LENGTH, "AES");
             System.out.println("AES Key Received");
 

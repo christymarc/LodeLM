@@ -63,8 +63,8 @@ public class Client {
             byte[] keyData =  aesKey.getEncoded();
 
             // Encrypt clientName and AES Key
-            byte[] clientShareKey = OtherUtils.concatenateByteArrays(clientName.getBytes(), keyData);
-            byte[] cipherText = RSAEncryption.RSAEncrypt(clientShareKey, serverPublicKey);
+            // byte[] clientShareKey = OtherUtils.concatenateByteArrays(clientName.getBytes(), keyData);
+            byte[] cipherText = RSAEncryption.RSAEncrypt(keyData, serverPublicKey);
             dataOutputStream.write(cipherText);
             dataOutputStream.flush();
             System.out.println("Secret Key Shared");
